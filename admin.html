@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة الإدارة</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .logout {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .logout:hover {
+            background-color: #c0392b;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .contact-form, .user-form {
+            display: flex;
+            flex-direction: column;
+        }
+        .contact-form label, .user-form label {
+            margin: 10px 0 5px;
+        }
+        .contact-form input, .contact-form textarea, .user-form input {
+            padding: 10px;
+            margin: 5px 0 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .contact-form button, .user-form button {
+            padding: 10px;
+            background-color: #2c3e50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .contact-form button:hover, .user-form button:hover {
+            background-color: #34495e;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>لوحة تحكم المسؤول</h1>
+        <button class="logout" onclick="logout()">تسجيل الخروج</button>
+    </div>
+    <div class="container">
+        <h2>إضافة مسؤول جديد</h2>
+        <form id="addAdminForm" class="user-form">
+            <label for="newAdminUsername">اسم المستخدم الجديد:</label>
+            <input type="text" id="newAdminUsername" class="form-control" required>
+            
+            <label for="newAdminPassword">كلمة المرور:</label>
+            <input type="password" id="newAdminPassword" class="form-control" required>
+            
+            <button type="submit">إضافة</button>
+        </form>
+        
+        <h2>المستخدمين الحاليين</h2>
+        <div id="users"></div>
+        
+        <h2>الرسائل المستلمة</h2>
+        <div id="messages"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = JSON.parse(localStorage.getItem('messages')) || [];
+            const messagesContainer = document.getElementById('messages');
+            messages.forEach(msg => {
+                const msgDiv = document.createElement('div');
+                msgDiv.classList.add('alert', 'alert-info');
+                msgDiv.innerHTML = `
+                    <strong>من: ${msg.username}</strong>
+                    <p>${msg.message}</p>
+                    <button class="btn btn-success reply-btn" data-username="${msg.username}" data-email="${msg.email}">رد</button>
+                `;
+                messagesContainer.appendChild(msgDiv);
+            });
+
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const usersContainer = document.getElementById('users');
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.classList.add('alert', 'alert-secondary');
+                userDiv.innerHTML = `
+                    <strong>اسم المستخدم: ${user.username}</strong>
+                    <br>
+                    <button class="btn btn-warning edit-user" data-username="${user.username}">تعديل</button>
+                    <button class="btn btn-danger delete-user" data-username="${user.username}">حذف</button>
+                `;
+                usersContainer.appendChild(userDiv);
+            });
+        });
+
+        document.getElementById('addAdminForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const username = document.getElementById('newAdminUsername').value;
+    const password = document.getElementById('newAdminPassword').value;
+    
+    // التحقق من إدخال البيانات
+    if (!username || !password) {
+        alert('يرجى إدخال اسم المستخدم وكلمة المرور');
+        return;
+    }
+
+    // جلب قائمة المسؤولين الحالية
+    let admins = JSON.parse(localStorage.getItem('admins'));
+    
+    if (!admins) {
+        admins = [];
+    }
+
+    // التحقق مما إذا كان المستخدم موجودًا بالفعل
+    const adminExists = admins.some(admin => admin.username === username);
+    
+    if (adminExists) {
+        alert('المسؤول موجود بالفعل');
+        return;
+    }
+
+    // إضافة المسؤول الجديد
+    admins.push({ username, password });
+    localStorage.setItem('admins', JSON.stringify(admins));
+    alert('تم إضافة المسؤول الجديد بنجاح');
+    location.reload(); // إعادة تحميل الصفحة لتحديث قائمة المسؤولين
+});
+
+
+        document.getElementById('messages').addEventListener('click', function(event) {
+            if (event.target.classList.contains('reply-btn')) {
+                const username = event.target.getAttribute('data-username');
+                const email = event.target.getAttribute('data-email');
+                const reply = prompt(`رد على ${username}:`);
+                if (reply) {
+                    const messages = JSON.parse(localStorage.getItem('messages')) || [];
+                    const msgIndex = messages.findIndex(msg => msg.username === username && msg.email === email);
+                    if (msgIndex !== -1) {
+                        messages[msgIndex].response = reply;
+                        localStorage.setItem('messages', JSON.stringify(messages));
+                        alert(`تم إرسال الرد إلى ${email}: ${reply}`);
+                    }
+                }
+            }
+        });
+
+        document.getElementById('users').addEventListener('click', function(event) {
+            if (event.target.classList.contains('edit-user')) {
+                const username = event.target.getAttribute('data-username');
+                const newUsername = prompt(`تعديل اسم المستخدم: ${username}`);
+                if (newUsername) {
+                    const users = JSON.parse(localStorage.getItem('users')) || [];
+                    const userIndex = users.findIndex(user => user.username === username);
+                    if (userIndex !== -1) {
+                        users[userIndex].username = newUsername;
+                        localStorage.setItem('users', JSON.stringify(users));
+                        location.reload();
+                    }
+                }
+            } else if (event.target.classList.contains('delete-user')) {
+                const username = event.target.getAttribute('data-username');
+                if (confirm(`هل أنت متأكد أنك تريد حذف المستخدم ${username}؟`)) {
+                    const users = JSON.parse(localStorage.getItem('users')) || [];
+                    const userIndex = users.findIndex(user => user.username === username);
+                    if (userIndex !== -1) {
+                        users.splice(userIndex, 1);
+                        localStorage.setItem('users', JSON.stringify(users));
+                        location.reload();
+                    }
+                }
+            }
+        });
+
+        function logout() {
+            alert('تم تسجيل الخروج بنجاح');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
